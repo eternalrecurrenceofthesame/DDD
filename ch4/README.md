@@ -62,7 +62,7 @@ Tip
 
 애그리거트에 속한 객체가 밸류인지 엔티티인지 구분하는 방법은 고유 식별자를 갖는지 확인하는 것이지만! 식별자를 갖고 있다고 해서 엔티티가 되는 것은 아님.
 
-@SecondaryTable 을 사용해서 엔티티의 내용을 담고 있는 밸류로 만들 수 있음 - ex) Article, ArticleContent 
+@SecondaryTable 을 사용해서 엔티티의 내용(content)을 담을 수 있는 밸류로 만들 수 있음 - ex) Article, ArticleContent 
 
 밸류를 컬렉션으로 매핑할 때는 2 가지 방법이 있다. 
 
