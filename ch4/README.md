@@ -75,6 +75,62 @@ Tip
 값 타입간 상속 계층 구조가 필요하다면 @Entity 를 사용하면 된다. 예제 클래스 참고! 
 
 
+## 4.4 애그리거트 로딩 전략
+
+애그리거트에 속한 객체가 모두 모여야 완전한 하나가 된다. 실무에서는 지연로딩으로 깔고가자 165P
+
+## 4.5 애그리거트의 영속성 전파
+
+애그리거트가 완전한 상태여야 한다는 것은 루트를 조회할 때 뿐만 아니라 저장하고 삭제할 때도 하나로 처리해야 한다는 의미다.
+
+참고로 값 타입 컬렉션은 Cascade + Orphan Remove 를 필수적으로 가진다. @Entity 를 사용하면 따로 설정해주면 됨.
+
+## 4.6 식별자 생성 기능
+
+* 사용자가 직접 생성
+* 도메인 로직으로 생성
+* DB 를 이용한 생성
+
+식별자 생성 규칙은 도메인 규칙이므로 도메인 영역에 식별자 생성 기능을 위치시키고 응용 서비스에서 도메인 서비스를 이용해서 식별자를 
+
+구하고 엔티티를 생성할 수 있다.
+
+```
+//도메인 서비스
+public class PrductIdService{
+  public ProductId nextId(){
+  // 식별자 생성
+  }
+
+// 응용 서비스
+public class CreateProductService{
+ @Autowired private ProductIdService idService;
+ @Autowired private ProductRepository productRepository;
+}
+```
+
+리포지토리에서 식별자를 따로 생성하거나 
+``` 
+OrderRepository 
+
+default OrderNo nextOrderNo(){
+        int randomNo = ThreadLocalRandom.current().nextInt(900000) + 100000;
+        String number = String.format("%tY%<tm%<td%<tH-%d", new Date(), randomNo);
+        return new OrderNo(number);
+    }
+
+```
+DB 자동 키 생성 방식으로 식별자를 생성하고 조회해 올수도 있음. 아이덴티티 전략.
+
+## 4.7 도메인 구현과 DIP
+
+저수준의 기술이 변경되어도 고수준의 로직이 영향을 받지 않기 위해 DIP 를 적용하지만 지금 도메인 모델에는 JPA 관련 애노테이션들이 많음.
+
+JPA 애너테이션을 도메인 모델에 사용하면서 기술에 따른 구현 제약이 낮다면 합리적인 선택이다. 
+
+
+
+
 
 
 
