@@ -39,6 +39,48 @@ OrderSummaryDao 에서 view 전용으로 만든 DTO 로 JPQL 을 사용해서 �
 
 ```
 
+## 5.5 스펙 조합 
+
+스프링 데이터 JPA 스펙 인터페이스는 스펙을 조합할 수 있는 여러가지 제공한다
+
+* and, or 을 사용한 스펙 조건 조합
+
+```
+Specification<OrderSummary> spec1 = OrderSummarySpecs.ordererId("user1");
+Specification<OrderSummary> spec2 = OrderSummarySpecs.orderDateBetween(
+          LocalDateTime.of(2022,1,1,0,0,0),
+          LocalDateTime.of(2022,1,2,0,0,0));
+          
+Specification<OrderSummary> spec3 = spe1.and(spec2); // 스펙 2 개를 조합해서 3 을만들었다.
+
+Specification<OrderSummary> spec = OrderSummarySpecs.ordererId("user1")
+                      .and(OrderSummarySpecs.orderDateBetween(from, to)); // 간소화 버전
+```
+
+* not 을 사용한 필터링
+```
+
+
+Specification<OrderSummary> spec = Specification
+                                   .not(OrderSummarySpecs.ordererId("user1"));
+```
+
+* null 여부를 판단해서 NPE 방지, where 로 간소화
+```
+
+Specification<OrderSummary> nullableSpec = createNullableSpec(); // null 일 가능성 있는 조건
+Specification<OrderSummary> otherSpec = createOtherSpec();
+
+Specification<OrderSummary> spec = 
+          nullableSpec == null ? otherSpec : nullableSpec.and(otherSpec);
+
+
+where 메서드를 이용한 null 판단
+Specification<OrderSummary> spec =
+            Specification.where(createNullableSpect()).and(createOtherSpec());
+```
+
+
 
 ## 5.9 동적 인스턴스 생성
 
