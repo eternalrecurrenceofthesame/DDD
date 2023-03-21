@@ -80,6 +80,58 @@ Specification<OrderSummary> spec =
             Specification.where(createNullableSpect()).and(createOtherSpec());
 ```
 
+## 5.6 정렬 지정하기
+
+```
+Sort sort1 = Sort.by("number").ascending();
+Sort sort2 = Sort.by("orderDate").descending();
+
+Sort sort = sort1.and(sort2);
+
+Sort osrt = Sort.by("number").ascending().and(Sort.by("orderDate").descending()); // 간소화
+
+List<OrderSummary> results = orderSummaryDao.findByOrderId("use1", sort);
+
+```
+
+## 5.7 페이징 처리하기
+
+```
+Pageable pageable = PageRequest.of(2,3);
+
+Page<MemberData> page = memberDataDao.findByBlocked(false, pageReq);
+
+page.getContent(); // 조회 결과 목록
+page.getTotalElements(); // 조건에 해당하는 전체 개수
+page.getTotalPages(); // 전체 페이지 번호
+page.getNumber(); // 현재 페이지 번호
+page.getNumberOfElements(); // 조회 결과 개수
+page.getSize(); // 페이지 크기 
+
+```
+```
+
+Page<MemberData> findByBlocked(boolean blocked, Pageable pageable); 
+List<MemberData> findByNameLike(String name, Pageable pageable);
+
+List 로 값을 받으면 count 쿼리를 실행하지 않는다.
+
+List<MemberData> findAll(Specification(MemberData> spec, Pageable pageable);
+
+스펙을 사용하면 List 로 값을 받아도 Count 쿼리를 실행한다.
+
+```
+
+```
+처음부터 N 개의 데이터가 필요한 경우
+
+List<MemberData> findFirst3ByNameLikeOrderByName(String name); // 프로 퍼티 기준 3 개 조회
+
+MemberData findFirstByBlockedOrderById(boolean blocked); // 개수를 지정하지 않으면 한 개 결과만 리턴
+
+First 대신 Top 을 사용해도 된다.
+```
+
 ## 5.8 스펙 조합을 위한 스펙 빌더 클래스
 
 스펙 빌더를 만들고 검색 요청 값을 넘기면 스펙 조건을 조합할 수 있다.  SpecBuilder, SearchRequest 참고. 
@@ -99,6 +151,8 @@ Specification<MemberData> spec = SpecBuilder.builder(MemberData.class)
 
 List<MemberData> result = memberDataDao.findAll(spec, PageRequest.of(0,5)); 
 ```
+
+결론 query dsl 을 사용하자.
 
 ## 5.9 동적 인스턴스 생성
 
