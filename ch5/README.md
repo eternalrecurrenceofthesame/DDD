@@ -80,7 +80,25 @@ Specification<OrderSummary> spec =
             Specification.where(createNullableSpect()).and(createOtherSpec());
 ```
 
+## 5.8 스펙 조합을 위한 스펙 빌더 클래스
 
+스펙 빌더를 만들고 검색 요청 값을 넘기면 스펙 조건을 조합할 수 있다.  SpecBuilder, SearchRequest 참고. 
+
+```
+SearchRequest sr = new SearchRequest();
+
+sr.set("name");
+sr.setOnlyNotBlocked(true);
+
+Specification<MemberData> spec = SpecBuilder.builder(MemberData.class)
+   . ifTrue(searchRequest.isOnlyNotBlocked(), 
+           () -> MemberDataSpecs.nonBlocked())
+   .ifHasText(searchRequest.getName(),
+             name -> MemberDataSpecs.nameLike(searchRequest.getName())
+    .toSpec();         
+
+List<MemberData> result = memberDataDao.findAll(spec, PageRequest.of(0,5)); 
+```
 
 ## 5.9 동적 인스턴스 생성
 
