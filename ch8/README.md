@@ -234,7 +234,55 @@ public DataAndLockId getDataWithLock(Long id){
 ```
 
 ```
+표현 영역
 
+@RequestMapping("/some/edit/{id}")
+public String editForm(@PathVariable("id") Long id, ModelMap model) {
+
+  DataAndLockId dl = dataService.getDataWithLock(id); // 앞서 만든 응용 서비스
+  model.addAttribute("data", dl.getData());
+  
+  // 잠금 해제에 사용하는 락 아이디
+  model.addAttribute("lockId", dl.getLockId());
+  return "editForm"
+}
+
+여기까지의 흐름을 정리하자면 수정 폼을 요청할 때 락아이디와 데이터 값을 리턴으로 받고 
+
+폼 화면을 보여준다. 이때 잠금 선점에 실패시 오류 발생, 다른 사용자가 데이터를 수정중인 것이니
+
+오류 화면을 보여주면 된다.
+
+<form th:action={@/some/edit/{id}(id=${data.id})}" method = "post">
+<input type = "hidden" name = "lid" th:value = "${lockId.value}">
+...
+</form>
+
+수정폼에서 post 호출시 할당받은 락 아이디를 히든필드로 같이 넘겨준다.
+```
+
+
+```
+@RequestMapping(value = "/some/edit/{id}", method = RequestMethod.Post)
+public String edit(@PathVariable("id") Long id, @ModelAttribute("editReq") EditRequest editReq,
+                                                @RequestParam("lid") String lockIdValue){
+editReq.setId(id);
+someEditService.edit(editReq, new LockId(lockIdValue)); // 처음 받은 락 아이디 값을 넘겨주고 응용 영역에서 작업 수행
+
+model.addAttribute("data",data);  // 데이터를 다시 받을 수 있는듯?? 
+return "editSuccess";  // 화면 출력.
+            }
+            
+
+응용 영역
+public void edit(EditRequest editReq, LockId lockId){
+
+lockManager.checkLock(lockId); // 잠금 상태 확인
+
+                               // 기능 실행
+
+lockManager.releaseLock(lockId);// 잠금 해제
+}
 
 ```
 
