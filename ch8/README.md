@@ -113,7 +113,7 @@ WHERE number = ? and version = 10
 
 응용 서비스는 버전에 대해서 알 필요가 없다.
 
-비선점 잠금을 위한 쿼리의 수행 결과 수정된 행의 개수가 0 이면 누군가 앞서 데이터를 수정한 것이고 예외가 발생한다.
+비선점 잠금을 위한 쿼리의 수행 결과 수정된 행의 개수가 0 이면 누군가 앞서 데이터를 수정한 것이고 예외가 발생한다. 256p
 
 예외는 서블릿을 거쳐서 예외 화면을 보여줄 수도 있고 컨트롤러에서 처리하거나 익셉션 리졸버로 필요한 값을 보여주면 된다.
 
@@ -132,8 +132,68 @@ WHERE number = ? and version = 10
 <input type = "submit" value = "배송 상태로 변경">
 </form>
 ```
+```
+표현 계층에서 응용 서비스로 값을 요청할 때도 버전 타입을 넣어줘야 함.
+
+public class StartShippingRequest{
+  private String orderNumber;
+  private long version;
+}
 
 
+응용 서비스에서 버전 값을 이용해 애그리거트 버전이 일치하는지 확인하고 일치하는 경우에만 기능 수행!
 
+public class StartShippingService{
 
+  @PreAuthorize("hasRole('ADMIN')")
+  @Transactional
+  public void startShipping(StartShippingRequest req){
+    Order order = orderRepository.findById(new OrderNo(req.getOrderNumber()));
+    checkOrder(order); //??
+    
+    if(!order.matchVersion(req.getVersion()) {
+       throw new VersionConflictException();  // 예외 발생시 표현 영역을 거쳐서 처리하게 됨. 
+    }
+  
+  order.startShipping();
+  }
+}
 
+```
+
+```
+표현 영역에서 오류 처리
+
+@PostMapping("/startShipping")
+public String startShipping(StartShippingRequest startReq){
+    try{
+      startShippingService.startShipping(startReq);
+      return "shippingStarted";
+      }catch(OptimisticLockingFailureException | VersionConflictException ex){
+      
+      return "startShippingTxConflict";
+
+      }
+    }
+    
+    * OptimisticLockingFailureException : 거의 동시에 애그리거트 수정시 발생하는 익셉션
+    
+    버전 충돌에 대한 구분이 명시적으로 필요 없다면 응용 서비스에서 프레임워크 용 익셉션을 발생시킬 수도 있다.
+```
+
+애그리거트에 엔티티가 두 개 있을 때 루트 엔티티가 아닌 다른 엔티티에서 값을 수정 한다고 해서 DBMS 의 버전 값은 변경되지 않음.
+
+하지만 비선점 잠금 방식을 사용하려면 다른 엔티티 값이 수정된 경우 루트 엔티티의 버전을 갱신해줘야 올바르게 비선점 잠금이 동작한다.
+
+```
+JPA 의 강제 버전 증가
+
+public Order findByIdOptimisticLockMode(OrderNo id){
+
+return em.find(Order.class, id, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+}
+
+스프링 데이터 JPA 사용시 @Lock 으로 해주면 된다.
+```
+
+## 8.4 오프라인 선점 잠금 
