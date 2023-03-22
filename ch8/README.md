@@ -197,3 +197,45 @@ return em.find(Order.class, id, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
 ```
 
 ## 8.4 오프라인 선점 잠금 
+
+선점 잠금은 하나의 트랜잭션에서 적용되는 개념이다. 
+
+수정화면을 요청하고 수정화면을 폼으로 보여주는 것을 하나의 트랜잭션 개념으로 끊을 수 있다. 이렇게하면 
+
+누군가 수정화면을 보고 있을 때 , 수정화면을 다른 스레드에서 수정해버릴 수 있음.
+
+수정화면을 보고 있을 때 수정하지 못하게 하는 것은 선점 잠금이나 , 비선점 잠금 방식으로는 구현할 수 없다. 
+
+선점 잠금의 경우 트랜잭션이 끝나버리고, 비선점 잠금은 단순 조회로 버전이 변경되지 않기 때문임 
+
+오프라인 선점 잠금을 이용해서 여러 트랜잭션에 걸쳐서 동시에 변경되는것을 막을 수 있다.
+
+```
+lock package
+
+LockManager.class // 오프라인 선점 잠금을 지원하는 인터페이스 
+
+LockId.class // 오프라인 선점 잠금에 필요한 락 아이디 (고유 식별자)
+
+
+응용 서비스에서 데이터와 락 아이디를 리턴하는 메서드
+public DataAndLockId getDataWithLock(Long id){
+   
+   // 오프라인 선점 잠금 시도
+   LockId lockId =  lockManager.tryLock("락 대상 타입",id);
+   
+   // 기능 실행 아이디 값으로 데이터를 DBMS 에서 가지고 온다.
+   Data data = someDao.select(id); 
+   
+   // 데이터와 락 아이디 값을 반환한다.
+   return new DataAndLockId(data, lockId);
+   
+}
+```
+
+```
+
+
+```
+
+
