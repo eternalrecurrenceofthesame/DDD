@@ -60,9 +60,62 @@ CQRS 를 이용해서 한 바운디드 컨텍스트에서 두 가지 방식을 �
 UI 계층을 파사드 처럼 이용해서 한번에 모아서 값을 보여줄 수도 있고 각각 따로따로 보여줄 수도 있다. 283P
   
   
+## 9.4 바운디드 컨텍스트 간 통합
   
+온라인 쇼핑 사이트에서 매출 증대를 위해 카탈로그 하위 도메인에 상품 추천 기능을 도입하기로 한다면 
   
+바운디드 컨텍스트간 통합이 발생할 수 있다. 상품 카탈로그를 조회했을 때 추천 상품 정보를 추천 도메인에서 읽어와야 하기 때문이다.  
+  
+카탈로그 시스템이 추천 시스템으로부터 추천 데이터를 받아올 때 카탈로그에서 추천 도메인 모델을 사용하기보다는 카탈로그 도메인 모델을
+  
+  사용해서 응용 서비스에서 추천 상품을 표현해야 한다.
+  
+  ```
+  // 상품 추천 기능을 표현하는 도메인 서비스
+  public interface ProductRecommendationService{
+    List<Product> getRecommendationOf(ProductId id); // 상품 추천에서 받은 추천 상품 아이디.
+  }
+  
+  카탈로그 관점에서 도메인 서비스를 만들고 인프라에서 외부 상품 추천 시스템 기능과 통신을 수행한다. 286p
+  ```
  
+  ```
+  infra 구현체
+  
+  public class RecSystemClient implements ProductRecommendationService{
+  
+  private ProductRepository productRepository; // ProductRepository 에 의존.
+  
+  @Override
+  private List<Product> getRecommendationsOf(ProductId id){
+  List<RecommendationItem> items = getRecItems(id.getValue());
+                          return toProducts(items);
+  }
+  
+  private List<RecommendationItem> getRecItems(String itemId){
+  
+  //externalRecClient 를 외부 추천 시스템을 위한 클라이언트라고 가정한다.
+  return externalRecClient.getRecs(itemId); 
+  
+  }
+  
+  private List<Product> toProducts(List<RecommendationItem> items){
+  return items.stream().map(item -> toProductId(item.getItemId()).map(prodId -> productRepository.findById(prodId))
+              .collect(toList());
+  
+  private ProductId toProductId(String itemId){
+    return new ProductId(itemId);
+  }
+  }
+  
+  
+  응용 서비스에서 카탈로그에 있는 프로덕트 아이디를 이용해서 외부 추천 시스템의 추천 상품 로직을 조회한다.
+  
+  (외부 추천 시스템은 인프라 영역에 해당한다) 
+  
+  추천 상품의 아이디 값으로 추천 상품들을 ProductRepository 에서 조회해서 추천 상품 목록을 반환하는 구조.
+  
+  ```
                                           
                                           
                                           
