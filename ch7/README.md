@@ -102,6 +102,34 @@ Tip
 
 * 외부 시스템 연동과 도메인 서비스
 
+외부 시스템과의 연동이 필요한 경우 도메인 관점에서 인터페이스를 작성하고 인프라 영역에 구현체를 만들고
+
+응용 서비스에서 도메인 서비스를 이용해 권한 검사를 할 수 있다.
+
+ex) 설문 조사 시스템을 외부 인프라로 연동해서 사용할 때 도메인은 사용자가 설문 조사 생성 권한을 가졌는지 확인하는 
+
+도메인 로직을 만들어야 할 수 있다. 
+
+```
+public interface SurveyPermissionChecker{ // 권한 검사 도메인 서비스
+
+    boolean hasUserCreationPermission(String userId);
+}
+
+public class CreateSurveyService{ // 도메인 서비스를 이용해 권한을 검사하는 응용 서비스
+
+    private SurveyPermissionChecker permissionChecker;
+    
+    public Long createSurvey(CreateSurveyRequest req){
+    validate(req);
+    
+    if(!permissionChecker.hasUserCreationPermission(req.getRequestorId())){
+      throw new NoPermissionException();
+      }
+      ...
+    }
+```
+
 
 * 도메인 서비스의 패키지 위치
 
