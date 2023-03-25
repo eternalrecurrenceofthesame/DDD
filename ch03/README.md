@@ -211,8 +211,30 @@ private CategoryId categoryId; // 카테고리 아이디 값만 받아옴
 ```
 
 ```
-product 만든 후 리팩토링
+// 카테고리 안에 있는 상품 찾기
+    @Transactional
+    public CategoryProduct getProductInCategory(Long categoryId, int page, int size){
+        CategoryData category = categoryDataDao.findById(new CategoryId(categoryId))
+                .orElseThrow(() -> new NoCategoryException());
+
+        // 페이지는 0 부터 시작함. 설정 수정으로 page - 1 로 표현 할 수도
+        Page<ProductData> productPage
+                = productDataDao.findByCategoryIdsContains(category.getId(),
+                                        Pageable.ofSize(size).withPage(0));
+
+        return new CategoryProduct(category,
+                 toSummary(productPage.getContent()), // summary 로 아이템 필드에 값 넣기
+                page,
+                productPage.getSize(),
+                productPage.getTotalElements(),
+                productPage.getTotalPages());
+
+    }
+
+category.query 패키지 참고
 ```
+
+카테고리 찾고 카테고리 아이디로 아이템을 조회용 모델로 담아서 반환하는 메서드.
 
 #### + M-N 다대 다 연관 관계 해결하기
 
