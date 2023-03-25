@@ -194,18 +194,18 @@ String selectQuery =
 
 ## 3.5 애그리거트 간 집합 연관
 
-1-N 연관관계인 카테고리와 상품에서 특정 카테고리에 속한 상품을 조회할 때 페치조인을 사용하면 쿼리한번으로 값을 가지고 올 수 있다.
+1-N 연관관계인 카테고리와 상품에서 특정 카테고리에 속한 상품을 조회할 때 페치조인을 사용하면 쿼리한번으로 상품을 가지고 올 수 있다.
 
 하지만 컬렉션과 페치조인을 사용할 경우 페이징을 하지 못한다. 모든 값을 다 메모리에 올린 다음에 페이징을 시도하기 때문이다 
 
-**(@BatchSize 로 최적화를 하는 방법이 있지만 교재에서 설명하는 범주가 아니므로 위 상황을 가정하고 설명한다.)**
+**(@BatchSize 로 최적화를 하는 방법이 있지만 책에서 설명하는 범주가 아니므로 위 상황을 가정하고 설명한다.)**
 
 카테고리에 속한 상품을 구할 필요가 있다면 상품 입장에서 자신이 속한 카테고리를 N-1 연관으로 구하면 된다.
 
 ```
 public class Product{
 ...
-private CategoryId categoryId; // 아이디 값만 받아옴
+private CategoryId categoryId; // 카테고리 아이디 값만 받아옴
 ...
 }
 ```
@@ -230,6 +230,46 @@ product 만든 후 리팩토링
 
 상품에서 카테고리를 알고 있으면 된다는 의미.
 
+```
+Product
+
+   @ElementCollection(fetch = FetchType.LAZY)
+   @CollectionTable(name = "product_category",
+                    joinColumns = @JoinColumn(name = "product_id"))
+    private Set<CategoryId> categoryIds;
+
+```
+
+@CollectionTable 으로 테이블을 만들고 카테고리 아이디 값들을 받아서 테이블에 저장한다. product_categroy 는 
+
+Product 의 pk 값을 외래키로 가지는 테이블이 된다.
+
+```
+public List<Product> findByCategoryId(CategoryId catId, int page, int size){
+
+TypeQuery<Product> query = 
+em.createQuery("select p from Product p " + "where :catId member of p.categoryIds order by p.id.id desc",
+                Product.class);
+                
+query.setParameter("catId", catId);
+query.setFirstResult(찾을 페이지);
+query.setMaxResult(size); // 개수
+
+return query.getResultList();
+}
+```
+
+JPQL 을 사용해서 categoryIds 테이블에 접근한 후 Product 아이디 값을 내림차순으로 가지고 오는 쿼리
+
+member of 를 이용하면 categoryIds 필드(테이블) 에 접근할 수 있다.
+
+카테고리에 저장된 카테고리 아이디 값에 해당하는 상품을 가지고 오는 구조 상품을 가지고 와서 객체 그래프 탐색으로
+
+중복 카테고리 값을 보여주면 된다 ?? 
+
+Tip
+
+목록이나 상세 화면과 같은 조회 기능은 조회(query) 전용 모델을 이용해서 구현하는 것이 더 좋다. 
 
 
 ## 3.6 애그리거트를 팩토리로 사용하기
