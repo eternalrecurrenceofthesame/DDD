@@ -90,7 +90,11 @@ OrderLine 에서 price, amount 는 int 를 사용하고 있지만 돈을 의미�
 
 밸류 타입은 밸류 타입을 위한 기능을 추가할 수 있다. Money 타입에 돈 계산을 위한 기능 추가해서 돈 계산이라는 의미로 코드 작성 가능!
 
-밸류 타입은 불변 객체로 구현해야 한다. 생성된 객체의 값을 함부로 바꿀 수 없게 해서 안전한 코드를 만들기 위함.
+밸류 타입은 불변 객체로 생성해야 한다. 값 타입의 필드 값들을 기본 타입으로 사용하면 서로 공유되지 않지만, 값 타입이 인스턴스로 
+
+만들어지면 필드 값이 공유될 수 있기 때문에 생성자를 통해서 생성하고 set 을 막아서 값을 변경할 수 없게 하여 불변 객체로 만든다.
+
+https://github.com/eternalrecurrenceofthesame/JPA/tree/main/JPA-basic 참고 
 
 ```
 Money price = ...;
@@ -100,10 +104,10 @@ OrderLine line = new OrderLine(product, price, quantity); // 주문 상세의 pr
 price.set (x)
 
 ```
+
 주문의 가격을 함부로 바꿀 수 없게 하기 위해 밸류 타입 Money 를 불변 객체로 만들고, 밸류 객체의 데이터 변경시 기존 데이터의 변경이 아닌
 
 변경한 데이터를 갖는 새로운 밸류 객체를 생성하는 add 메서드를 만들어준다! 50p
-
 
 ```
 public class Order{
