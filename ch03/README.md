@@ -84,7 +84,7 @@ public void chagneShippingInfo(OrderId id, ShippingInfo newShippingInfo, boolean
 ```
 트랜잭션 전파 합류를 통해서 하나의 트랜잭션으로 묶고 하나의 물리 트랜잭션으로 관리할 수 있다.
 
-보통 하나의 트랜잭션에서 한 개의 애그리거트 수정을 권장하지만, 다음의 경우 두 개 이상의 애그리거트 변경을 고려할 수 있다.
+보통 하나의 트랜잭션에서 한 개의 애그리거트 **수정**을 권장하지만, 다음의 경우 두 개 이상의 애그리거트 변경을 고려할 수 있다.
 ``` 
 팀 표준
 
@@ -92,12 +92,19 @@ public void chagneShippingInfo(OrderId id, ShippingInfo newShippingInfo, boolean
 
 UI 구현의 편리 111P
 ```
-    
+
 ## 3.3 리포지터리와 애그리거트
 
 애그리거트는 개념상 완전한 한 개의 도메인 모델을 표현하므로 객체의 영속성을 처리하는 리포지터리는 애그리거트 단위로 존재한다.
 
-애그리거트는 개념적으로 하나이므로 리포지토리는 애그리거트 전체를 저장소에 영속화 해야 한다.
+즉 애그리거트 루트를 위한 리포지터리만 존재하게 된다. 
+```
+Order 와 OrderLine 을 각각의 엔티티로 만들더라도 결국 Order 루트를 저장하는 하나의 리포지토리로 구현한다.
+자식 객체가 되는 OrderLine 은 CASCADE, orphan removal 로 부모 객체와 같은 생명주기로 관리할 수 있다.
+
+https://github.com/eternalrecurrenceofthesame/JPA/tree/main/JPA-basic 참고
+```
+애그리거트는 개념적으로 하나이므로 리포지토리는 애그리거트 전체를 저장소에 영속화 할 수 있어야 한다.
 
 Order 애그리거트와 관련된 테이블이 3 개라면 Order 애그리거트를 저장할 때 애그리거트 루트와 매핑되는 테이블 뿐만 아니라 
 
@@ -107,7 +114,7 @@ Order 애그리거트와 관련된 테이블이 3 개라면 Order 애그리거�
 
 ## 3.4 ID 를 이용한 애그리거트 참조
 
-애그리거트가 관리하는 범위는 자기 자신으로 한정해야 한다. 다른 애그리거트를 참조해서 값을 얻어야 하는 경우 필드로 엔티티의 
+애그리거트가 관리하는 범위는 자기 자신으로 한정해야 한다. 다른 애그리거트를 **참조**해서 값을 얻어야 하는 경우 필드로 엔티티의 
 
 참조 값을 받아서 객체를 탐색할 수도 있지만 단점도 존재한다.
 
@@ -123,14 +130,12 @@ private String name;
 
 * JPA 사용시 로딩 성능 관리에 대한 고민을 해야한다. 116p
 
-* 마이크로 서비스를 분리해서 다양한 데이터베이스를 사용할 경우 애그리거트 루트를 참조하기 위한 JPA 와 같은 단일 기술을 사용할 수 없게 된다.
+* 하나의 모듈을 마이크로서비스로 분리해서 다양한 데이터베이스를 사용할 경우 애그리거트 루트를 참조하기 위한 JPA 와 같은 단일 기술을 사용할 수 없게 된다.
 
-이런 단점들을 해결할 수 있는 방법은 객체를 직접 참조하는 것이 아닌 ID 를 이용해서 참조하는 것이다. 다른 애그리거트를 참조할 때 
-
-애그리거트 루트의 ID 값을 참조하는 것.
+이런 단점들을 해결할 수 있는 방법은 객체를 직접 참조하는 것이 아닌 ID 를 이용해서 참조하는 것이다. 다른 애그리거트를 참조할 때 애그리거트 루트의 ID 값을 참조하면 된다.
 
 ```
-public  class Orderer {
+public class Orderer {
   private MemberId memberId;  // 멤버 애그리거트의 루트 ID
   private String name; 
 }
@@ -138,11 +143,11 @@ public  class Orderer {
 
 ID 참조를 사용해서 애그리거트 간 물리적 연결을 제거하고 애그리거트의 경계를 명확하게 할 수 있으며 애그리거트 간 의존을 제거해서 응집도를 높여준다.
 
-JPA 를 사용한다고 하면 직접 참조값을 사용하지 않으므로 로딩에 대한 고민을 할 필요가 없다. 
-
-참조하는 애그리거트가 필요하면 응용 서비스에서 ID 값을 이용해서 로딩하면 된다! 
+JPA 를 사용한다고 하면 직접 참조값을 사용하지 않으므로 로딩에 대한 고민을 할 필요가 없다. 참조하는 애그리거트가 필요하면 응용 서비스에서 ID 값을 이용해서 로딩하면 된다! 
 
 ```
+* 응용 서비스에서 아이디 값으로 다른 애그리거트 조회하기 
+
 public class ChangeOrderService{
   
   @Transactional
@@ -153,7 +158,7 @@ public class ChangeOrderService{
   
   if(useNewShipingAsMemberAddr){
   
-  Member member = memberRepository.findById(order.getOrderer().getMemberId()); <- 다른 애그리거트 루트의 ID 값 사용! 
+  Member member = memberRepository.findById(order.getOrderer().getMemberId()); <- 멤버 애그리거트를 아이디 참조로 조회한다.
   
   member.changeAddress(newShippingInfo.getAddress();
 
@@ -161,14 +166,29 @@ public class ChangeOrderService{
 ```
 응용 서비스에서 필요한 애그리거트(Member)를 로딩하므로 애그리거트 수준에서 지연 로딩을 하는 것과 동일한 결과를 만든다.
 
-ID 를 이용해서 여러 애그리거트를 조회하면 조회성능에서 문제가 생길 수 있다. 주문 목록을 보여주려면 상품 애그리거트와 
+ID 를 이용해서 여러 애그리거트를 조회하면 조회성능에서 문제가 생길 수도 있다. 예를 들어 주문 목록을 보여주려면 상품 애그리거트와 회원 애그리거트를 함께 읽어야 하는데 한번에 값을 가져오는 게 아니라 각각 쿼리를 날리기 때문에 N+1 의 문제를 발생시킨다.
 
-회원 애그리거트를 함께 읽어야 하는데 한번에 값을 가져오는 게 아니라 각각 쿼리를 날려서 N+1 의문제를 발생시킴 먼저 회원을 조회했는데 
-
-회원이 주문한 상품이 10 개면 10 번의 쿼리를 추가로 실행함. 119p
-
-위 예시 같은 ID 쿼리 참조 방식을 사용하면서 N+1 문제를 방지하려면 조회를 위한 별도의 DAO 를 만들고 조회 전용 쿼리로 한번에 값을 가져오면 된다.
 ```
+* ID 참조의 문제점 
+
+Member member = memberRepository.findById(ordererId);
+
+List<Order> orders = orderRepository.findByOrderer(ordererId);
+List<OrderView> dtos = orders.stream()
+ .map(order -> {
+        ProductId prodId = order.getOrderLines().get(0).getProductId();
+        Product product = productRepository.findById(prodId);
+        return new OrderView(order,member,product);
+        }).collect(toList());
+```
+
+주문자 아이디값으로 멤버와 주문을 조회한다 그리고 주문 뷰를 만들기 위해 주문자가 주문한 상품을 조회하게 되는데 위 예시 같은 아이디 쿼리 참조 방식을 사용하면 멤버가 주문한 상품이 10 개일 때 10 번의 추가적인 쿼리가 발생한다. 
+
+이 문제를 방지하려면 조회를 위한 별도의 DAO 를 만들고 조회 전용 쿼리를 사용해서 값을 한번에 가져오면 된다. 
+
+```
+* 조회 전용 DAO 를 사용해서 값을 한번에 가져오기 OrderSummaryDao 참고 
+
 @Repository
 public class JpaOrderViewDao implements OrderViewDao{
 
@@ -187,20 +207,19 @@ String selectQuery =
 }
 ```
 
-애그리거트마다 서로 다른 저장소를 사용하면 한번의 쿼리로 관련 애그리거트를 조회할 수 없다. 이때는 조회 성능을 높이기 위해 캐시를 적용하거나
+애그리거트마다 서로 다른 저장소를 사용하면 한번의 쿼리로 관련 애그리거트를 조회할 수 없다. 이때는 조회 성능을 높이기 위해 캐시를 적용하거나 조회 전용 저장소를 따로 구성해야 한다 (JPA 를 사용한 조회 전용 쿼리 ch 5 에서 설명, CQRS 패턴 사용 ch 11 에서 설명)
 
-조회 전용 저장소를 따로 구성해야 한다 (CQRS 패턴 사용 ch 11 에서 설명)
-
-## 3.5 애그리거트 간 집합 연관
-
+## 3.5 애그리거트 간 집합 연관 ch 5 를 참고하는 것을 추천한다. 
+```
 1-N 연관관계인 카테고리와 상품에서 특정 카테고리에 속한 상품을 조회할 때 페치조인을 사용하면 쿼리한번으로 상품을 가지고 올 수 있다.
-
 하지만 컬렉션과 페치조인을 사용할 경우 페이징을 하지 못한다. 모든 값을 다 메모리에 올린 다음에 페이징을 시도하기 때문이다 
 
 **(@BatchSize 로 최적화를 하는 방법이 있지만 책에서 설명하는 범주가 아니므로 위 상황을 가정하고 설명한다.)**
 
-카테고리에 속한 상품을 구할 필요가 있다면 상품 입장에서 자신이 속한 카테고리를 N-1 연관으로 구하면 된다.
+위 내용과 관련된 사항은 https://github.com/eternalrecurrenceofthesame/JPA/tree/main/API-Optimization 를 참고한다.
+```
 
+카테고리(1) 에 속한 상품을 구할 필요가 있다면 상품(N) 입장에서 자신이 속한 카테고리를 N-1 연관으로 구하면 된다.
 ```
 public class Product{
 ...
@@ -208,7 +227,6 @@ private CategoryId categoryId; // 카테고리 아이디 값만 받아옴
 ...
 }
 ```
-
 ```
 // 카테고리 안에 있는 상품 찾기
     @Transactional
@@ -237,9 +255,7 @@ category.query 패키지 참고
 
 #### + M-N 다대 다 연관 관계 해결하기
 
-다대다는 양쪽 애그리거트에 컬렉션으로 연관 관계를 만든다. 
-
-상품이 여러 카테고리에 속할 수도 있고 카테고리가 여러 상품을 가질 수도 있다.
+다대다는 양쪽 애그리거트에 컬렉션으로 연관 관계를 만든다. 상품이 여러 카테고리에 속할 수도 있고 카테고리가 여러 상품을 가질 수도 있다.
 
 앞서 만든 것들 처럼 값 타입으로 아이디를 사용하는 경우 다대 다 관계를 만들 때는 요구사항을 고려해서 @CollectionTable 을 만들면 된다.
 
@@ -280,34 +296,34 @@ return query.getResultList();
 }
 ```
 
-JPQL 을 사용해서 categoryIds 테이블에 접근한 후 Product 아이디 값을 내림차순으로 가지고 오는 쿼리
+JPQL 을 사용해서 categoryIds 테이블에 접근한 후 Product 아이디 값을 내림차순으로 가지고 오는 쿼리 member of 를 이용하면 categoryIds 필드(테이블) 에 접근할 수 있다.
 
-member of 를 이용하면 categoryIds 필드(테이블) 에 접근할 수 있다.
-
-카테고리에 저장된 카테고리 아이디 값에 해당하는 상품을 가지고 오는 구조 상품을 가지고 와서 객체 그래프 탐색으로
-
-중복 카테고리 값을 보여주면 된다 ?? 
+카테고리에 저장된 카테고리 아이디 값에 해당하는 상품을 가지고 오는 구조, 상품을 가지고 와서 객체 그래프 탐색으로 중복 카테고리 값을 보여주면 된다 ?? 
 
 Tip
 
-목록이나 상세 화면과 같은 조회 기능은 조회(query) 전용 모델을 이용해서 구현하는 것이 더 좋다. 
+목록이나 상세 화면과 같은 조회 기능은 조회(query) 전용 모델을 이용해서 구현하는 것이 더 좋다. ch 5 참고 
 
 
 ## 3.6 애그리거트를 팩토리로 사용하기
 
-Store 에서 Product 를 등록하지 못하도록 차단하는 로직을 구현할 때 Product 를 등록할 수 있는지 없는지 판단하고 애그리거트를 생성하는 로직은 도메인의 기능이다.
+Store 에 Product 가 등록되지 못하도록 차단하는 로직을 구현할 때 Product 를 등록할 수 있는지 없는지 판단하고 애그리거트를 생성하는 로직은 응용 서비스가 아닌 도메인에서 구현해야 할 기능이다.
+
+(상점에서 더 이상 물건을 등록하지 못하도록 차단한 상태를 가정한다.) 
+
+왜냐하면 고객이 특정 Store 에 물건을 등록하지 못하도록 차단하는 기능은 요구 사항이고 요구사항은 핵심 도메인 규칙으로 구현되어야 하기 떄문이다. 
 
 ```
-<잘못된 예시>
+* [잘못된 예시] - 응용 서비스에 도메인 로직을 구현
 
 public class RegisterProductService{
 
-public ProductId registerNewProduct(NewProductRequest req){
+public ProductId registerNewProduct(NewProductRequest req){ // 상품 등록 요청 파라미터 
 
-Store store = storeRepository.findById(req.getStoredId());  // Store 
+Store store = storeRepository.findById(req.getStoredId());  // Store 조회
 checkNull(store);
 
-if(store.isBlocked()){                                 // Store 에서 등록 여부 판단
+if(store.isBlocked()){                                 // Store 의 차단 여부 확인 
  throw new StoreBlockedException();
 }
 
@@ -317,24 +333,19 @@ Product product = new Product(id, store.getId(), ...); // 애그리거트 생성
 productRepository.save(product);
 
 return id;
-}
-
-}
+}}
 ```
+Store 의 상태에 따라 Product 를 생성할 수 있어야 하는 경우 즉 다른 애그리거트인 Store 의 식별자가 필요한 경우라면 팩토리 메서드를 고려할 수 있다
 
-Product 처럼 다른 애그리거트 Store 의 식별자를 이용해서 생성해야 하는 경우 팩토리 메서드를 고려하자 , Store 의 상태에 따라서 Product 를 생성할 수 있다
-
-Product 를 생성할 떄 필요한 데이터의 일부를 직접 제공하면서 동시에 중요한 도메인 로직도 함께 구현할 수 있다.
-
-
+Product 를 생성할 때 필요한 데이터의 일부를 직접 제공하면서 동시에 중요한 도메인 로직도 함께 구현한다. 
 ```
 public class Store{
 
-public Product createProduct(ProductId newProductId, ...){  // 애그리거트 생성 팩터리
+// 스토어에서 상품을 등록하는 도메인 규칙
+public Product createProduct(ProductId newProductId, ...){  // 상품 애그리거트 생성 팩터리
   if(isBlocked()) throw new StoreBlockedException();
   return new Product(newProductId, getId(), ...);
-}
-}
+}}
 
 
 public class RegisterProductService{
@@ -349,32 +360,22 @@ Product product = store.createProduct(id, ...);
 
 productRepository.save(product);
 return id;
-}
-
-}
+}}
 
 ```
-위 예시처럼 애그리거트 생성 팩터리를 만들고 응용 서비스에서 팩터리 메서드를 호출해서 애그리거트를 생성하도록 해주자.
+위 예시처럼 애그리거트 생성 팩터리 메서드를 도메인에 만들고 응용 서비스에서 팩터리 메서드를 호출해서 도메인에서 애그리거트를 생성하도록 해주자.
 
 Store 애그리거트가 Product 애그리거트를 생성할 때 많은 정보를 알아야 한다면, Store 애그리거트에서 Product 애그리거트를 직접 생성하지 않고
 
 다른 팩토리에 위임하는 방법도 있다. 다른 팩토리에 위임하더라도 차단 상태의 상점은 상품을 만들 수 없다는 도메인 로직은 Store 에 계속 위치하게 된다.
 
 ```
-다른 팩토리에 위임
+* [다른 팩토리에 위임]
 
 public class Store{
 
 public Product createProduct(ProductId newProductId, ...){  // 애그리거트 생성 팩터리
   if(isBlocked()) throw new StoreBlockedException();
   return ProductFactory.create(newProductId, getId(), pi);
-}
-}
+}}
 ```
-
-
-
-
-
-
-
