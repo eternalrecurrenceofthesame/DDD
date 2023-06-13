@@ -85,6 +85,8 @@ Tip
 
 참고로 값 타입 컬렉션은 Cascade + Orphan Remove 를 필수적으로 가진다. @Entity 를 사용하면 따로 설정해주면 됨.
 
+https://github.com/eternalrecurrenceofthesame/DDD/tree/main/ch03 참고
+
 ## 4.6 식별자 생성 기능
 
 * 사용자가 직접 생성
@@ -128,9 +130,4 @@ DB 자동 키 생성 방식으로 식별자를 생성하고 조회해 올수도 
 
 JPA 애너테이션을 도메인 모델에 사용하면서 기술에 따른 구현 제약이 낮다면 합리적인 선택이다. 
 
-
-
-
-
-
-
+그 외 필요한 것들은 예제 코드를 확인한다. 
