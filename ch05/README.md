@@ -160,6 +160,8 @@ List<MemberData> result = memberDataDao.findAll(spec, PageRequest.of(0,5));
 
 OrderSummaryDao 참고
 
+https://github.com/eternalrecurrenceofthesame/JPA/tree/main/API-Optimization 참고
+
 ## 5.10 하이버네이트 @Subselect 사용
 
 데이터를 조회할 때 @Table("view_entitiy") 을 사용해서 뷰 전용 가상 테이블을 엔티티와 매핑시켜 사용할 수 
