@@ -311,7 +311,7 @@ Store 에 Product 가 등록되지 못하도록 차단하는 로직을 구현할
 
 (상점에서 더 이상 물건을 등록하지 못하도록 차단한 상태를 가정한다.) 
 
-왜냐하면 특정 Store  물건을 등록하지 못하도록 차단하는 기능은 요구 사항이고 요구사항은 핵심 도메인 규칙으로 구현되어야 하기 떄문이다. 
+왜냐하면 특정 Store 가 물건을 등록하지 못하도록 차단하는 기능은 요구 사항이고 요구사항은 핵심 도메인 규칙으로 구현되어야 하기 떄문이다. 
 
 ```
 * [잘못된 예시] - 응용 서비스에 도메인 로직을 구현
@@ -335,10 +335,13 @@ productRepository.save(product);
 return id;
 }}
 ```
-Store 의 상태에 따라 Product 를 생성할 수 있어야 하는 경우 즉 다른 애그리거트인 Store 의 식별자가 필요한 경우라면 팩토리 메서드를 고려할 수 있다
+Store 의 상태에 따라 Product 를 생성할 수 있어야 하는 경우 즉 애그리거트인 Store 의 식별자가 필요한 경우라면 팩토리 메서드를 고려할 수 있다
 
-Product 를 생성할 때 필요한 데이터의 일부를 직접 제공하면서 동시에 중요한 도메인 로직도 함께 구현한다. 
+팩토리 메서드로 도메인 규칙인 특정 상점은 상품을 등록할 수 없다를 구현하기 위해 Store 에서 Product 를 생성할 때 필요한 데이터의 일부인 Blocaked 상태 필드를 Store 에서 직접 제공하면서 동시에 중요한 도메인 로직도 함께 구현하면 요구사항을 도메인 규칙응로 구현할 수 있다.
+
 ```
+* [요구 사항을 도메인 규칙으로 구현]
+
 public class Store{
 
 // 스토어에서 상품을 등록하는 도메인 규칙
@@ -350,13 +353,13 @@ public Product createProduct(ProductId newProductId, ...){  // 상품 애그리�
 
 public class RegisterProductService{
 
-public ProductId registerNewProduct(NewProductRequest req){
+public ProductId registerNewProduct(NewProductRequest req){ // 상품 등록 요청 파라미터 
 
-Store store = storeRepository.findById(req.getStoreId());
+Store store = storeRepository.findById(req.getStoreId()); // Store 조회
 checkNull(store);
 
-ProductId id = productRepository.nextId();
-Product product = store.createProduct(id, ...);
+ProductId id = productRepository.nextId(); // 상품 만들 준비 
+Product product = store.createProduct(id, ...); // store 도메인 규칙으로 store 체크 
 
 productRepository.save(product);
 return id;
