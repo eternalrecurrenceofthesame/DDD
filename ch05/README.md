@@ -136,9 +136,11 @@ First 대신 Top 을 사용해도 된다.
 ```
 ## 5.8 스펙 조합을 위한 스펙 빌더 클래스
 
-스펙 빌더를 만들고 검색 요청 값을 넘기면 스펙 조건을 조합할 수 있다.  SpecBuilder, SearchRequest 참고. 
+스펙 빌더를 만들고 검색 요청 값을 넘기면 스펙을 조합할 수 있다.  SpecBuilder, SearchRequest 참고. 
 
 ```
+* MemberDataDaoTest 참고 
+
 SearchRequest sr = new SearchRequest();
 
 sr.set("name");
@@ -153,8 +155,6 @@ Specification<MemberData> spec = SpecBuilder.builder(MemberData.class)
 
 List<MemberData> result = memberDataDao.findAll(spec, PageRequest.of(0,5)); 
 ```
-
-결론 query dsl 을 사용하자.
 
 ## 5.9 동적 인스턴스 생성
 
