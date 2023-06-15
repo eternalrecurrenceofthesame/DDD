@@ -103,28 +103,75 @@ return "order/success";
 
 * 표현 영역에 의존하지 않기
 
-표현 영역에서 응용 서비스에서 사용하는 자료형으로 바꾸지 않고 파라미터를 넘겨주게 되면 응용 서비스가 표현 영역에 의존하게 된다.
+표현 영역에서 응용 서비스에서 사용하는 자료형으로 바꾸지 않고 파라미터를 넘겨주게 되면 응용 서비스가 표현 영역에 의존하게 된다. 
 
-표현 영역에서 값을 바꾸면 두 군데 모두 바꿔야 해서 표현 영역의 응집도가 떨어지게 된다. (품질 저하)
-
-이를 방지하기 위해 서비스 메서드의 파라미터와 리턴 타입으로 표현 영역의 구현 기술을 사용하지 않는 방법이 있다.
-
-```
-public void authenticate(HttpServletRequest request){
-  String id = request.getParameter("id");
-  String password = request.getParameter("password");
-  
-  if(checkIdPasswordMatching (id, password)) {  // 응용 서비스 파라미터 값으로 바꿔서 넘겨주기.
-  HttpSession session = request.getSession();
-  session.setAttribute("auth", new Authentication(id));
-  }
-}
-
-```
+(표현 영역에서 사용하는 HttpServletRequest request 의 값을 그대로 넘겨주면 안 된다.)
 
 * 트랜잭션 처리 
 
-트랜잭션은 응용 서비스 영역에서 시작한다.
+트랜잭션은 응용 서비스 영역에서 시작한다. 스프링 프레임워크는 @Transactional 이 적용된 곳에서 RuntimeException 이 발생하면 
+
+트랜잭션을 롤백한다.
+
+## 6.4 표현 영역
+```
+* 표현 영역이 제공하는 기능
+
+사용자가 시스템을 사용할 수 있는 화면을 제공하고 제어한다.
+- 단순 컨트롤러 뿐 아닌 입력 폼을 포함
+
+사용자의 요청을 알맞은 응용 서비스에 전달하고 결과를 사용자에게 제공한다.
+- 응용 서비스에 요청을 전달할 때 요청 데이터를 응용 서비스가 요구하는 형식으로 변환하고
+  반환된 응용 서비스의 결과를 사용자에게 응답할 수 있는 형식으로 변환한다. 
+
+사용자의 세션을 관리한다.
+- 웹은 쿠키나 서버 세션을 이용해서 사용자의 연결 상태를 관리한다. 
+```
+## 6.5 값 검증
+
+표현 영역은 요청 파라미터 값이 올바른지에 대한 검사를 하며 응용 서비스는 파라미터로 전달받은 값이 올바른지 검사한다.
+
+
+
+## 6.6 권한 검사 
+
+표현 영역, 응용 서비스, 도메인 세 곳에서 스프링 프레임워크로 권한 검사를 수행할 수 있다.
+```
+* 표현 영역에서 권한 검사
+
+스프링 프레임워크의 시큐리티 필터 체인을 사용해서 인증 여부와 권한에 따른 엔드 포인트 호출을 제어할 수 있다. 
+```
+```
+* 응용 서비스에서 권한 검사
+
+스프링 시큐리티가 제공하는 전역 메서드 보안을 사용해서 애플리케이션 전 계층에서 권한을 검사할 수 있다.
+https://github.com/eternalrecurrenceofthesame/Spring-security-in-action/tree/main/part4/ch16 참고
+```
+```
+* 개별 도메인 객체 단위 검사 하기 
+
+public void delete(String userId, Long articleId){
+
+  Article article = articleRepository.findById(articleId);
+  checkArticleExistence(article);
+  permissionService.checkDeletePermission(userId, article); // 권한 체크 
+  article.markDeleted(); // 도메인 규칙 호출
+  ...
+}
+
+permissionService.checkDeletePermission 메서드는 전달받은 사용자 아이디와 게시글을 이용해서
+삭제 권한이 있는지 검사할 수 있다. 그리고 도메인 규칙을 호출한다.
+
+위 방법은 앞서 언급한 전역 메서드 보안을 사용해서 검사하는 방향으로 만들 수도 있다.
+```
+
+## 6.7 조회 전용 기능과 응용 서비스
+
+단순 조회를 위한 기능은 트랜잭션이 필요 없으므로 표현 영역에서 바로 조회할 수도 있다. 
+
+
+
+
 
   
 
