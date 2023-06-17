@@ -205,88 +205,86 @@ return em.find(Order.class, id, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
 
 ## 8.4 오프라인 선점 잠금 
 
-선점 잠금은 하나의 트랜잭션에서 적용되는 개념이다. 컨트롤러에서 수정화면을 요청하고 수정화면을 폼으로 보여주는 것을 하나의 트랜잭션 개념으로 끊을 수 있다. 
+선점 잠금은 하나의 트랜잭션에서 적용되는 개념이다. 컨트롤러에서 수정화면을 요청하고 수정화면을 폼으로 보여주는 것은 하나의 트랜잭션 개념이다. 애플리케이션에서는 수정 폼을 클라이언트에 보여주는 것으로써 트랜잭션이 끝나게 된다.  
 
-이렇게하면 누군가 수정화면을 보고 있을 때, 수정화면을 다른 스레드에서 수정해버릴 수 있다.
+단순 수정 폼을 보여주는 것 만으로 트랜잭션이 끝나게되면 데이터를 수정하고 있는 중 다른 스레드가 수정 폼을 요청해서 값을 수정할 수 있다. 먼저 요청한 스레드가 수정 화면을 보고 있을 때 수정하지 못하게 하는 것은 선점 잠금이나 , 비선점 잠금 방식으로는 구현할 수 없다. 
 
-수정화면을 보고 있을 때 수정하지 못하게 하는 것은 선점 잠금이나 , 비선점 잠금 방식으로는 구현할 수 없다. 
+선점 잠금의 경우 트랜잭션이 끝나버리고, 비선점 잠금은 단순 조회로 버전이 변경되지 않기 때문이다. 오프라인 선점 잠금을 사용하면 여러 트랜잭션에 걸쳐서 동시에 변경되는것을 막을 수 있다.
 
-선점 잠금의 경우 트랜잭션이 끝나버리고, 비선점 잠금은 단순 조회로 버전이 변경되지 않기 때문이다. 
-
-오프라인 선점 잠금을 이용해서 여러 트랜잭션에 걸쳐서 동시에 변경되는것을 막을 수 있다.
-
+### 오프라인 선점 잠금 구현하기 
 ```
-lock package
+* lock package 참고 
 
 LockManager.class // 오프라인 선점 잠금을 지원하는 인터페이스 
+LockId.class // 오프라인 선점 잠금에 필요한 락 아이디 (락 데이터 고유한 식별자)
 
-LockId.class // 오프라인 선점 잠금에 필요한 락 아이디 (고유 식별자)
 
-
-응용 서비스에서 데이터와 락 아이디를 리턴하는 메서드
+수정할 데이터의 식별자를 사용해서 데이터를 조회하면서 식별자의 값을 이용해 오프라인 선점 잠금을 생성하는 메서드
 public DataAndLockId getDataWithLock(Long id){
    
-   // 오프라인 선점 잠금 시도
+   // 1. 오프라인 선점 잠금 시도 (이미 생성된 락이 있는지 체크하고 락 아이디를 생성한다) 
    LockId lockId =  lockManager.tryLock("락 대상 타입",id);
    
-   // 기능 실행 아이디 값으로 데이터를 DBMS 에서 가지고 온다.
+   // 2. 데이터의 식별자로 수정할 데이터를 조회한다.
    Data data = someDao.select(id); 
    
-   // 데이터와 락 아이디 값을 반환한다.
+   // 3. 데이터와 락 아이디 값을 반환한다.
    return new DataAndLockId(data, lockId);
    
 }
 ```
-
 ```
-표현 영역
+* 수정폼 요청 엔드포인트 구성 
 
 @RequestMapping("/some/edit/{id}")
 public String editForm(@PathVariable("id") Long id, ModelMap model) {
 
-  DataAndLockId dl = dataService.getDataWithLock(id); // 앞서 만든 응용 서비스
+  // 1. 데이터 식별자가 요청 값으로 넘어오면 락이 생성되었는지 확인하고 데이터를 조회한다.
+  DataAndLockId dl = dataService.getDataWithLock(id); 
   model.addAttribute("data", dl.getData());
   
-  // 잠금 해제에 사용하는 락 아이디
+  // 2. 잠금 해제에 사용하는 락 아이디
   model.addAttribute("lockId", dl.getLockId());
-  return "editForm"
+  return "editForm" // editForm 호출 
 }
 
-여기까지의 흐름을 정리하자면 수정 폼을 요청할 때 락아이디와 데이터 값을 리턴으로 받고 
+여기까지의 흐름을 정리하자면 수정 폼을 요청할 때 식별자 값으로 락아이디를 값을 검증하고 조회한 데이터와 아이디 값을
+폼 화면에 넘겨준다.
 
-폼 화면을 보여준다. 이때 잠금 선점에 실패시 오류 발생, 다른 사용자가 데이터를 수정중인 것이니
+락을 얻지 못하면 오류가 발생한다. (이미 누군가 락을 생성해서 수정중이라는 의미임)
 
-오류 화면을 보여주면 된다.
-
+// 수정폼 
 <form th:action={@/some/edit/{id}(id=${data.id})}" method = "post">
-<input type = "hidden" name = "lid" th:value = "${lockId.value}">
+<input type = "hidden" name = "lid" th:value = "${lockId.value}"> // lockId 는 히든 필드로 넘겨준다.
 ...
 </form>
 
 수정폼에서 post 호출시 할당받은 락 아이디를 히든필드로 같이 넘겨준다.
 ```
-
-
 ```
+* 수정폼 POST 요청 메서드 
+
 @RequestMapping(value = "/some/edit/{id}", method = RequestMethod.Post)
 public String edit(@PathVariable("id") Long id, @ModelAttribute("editReq") EditRequest editReq,
-                                                @RequestParam("lid") String lockIdValue){
+                                                @RequestParam("lid") String lockIdValue){ // 히든 값으로 넘어오는 lid
+
 editReq.setId(id);
-someEditService.edit(editReq, new LockId(lockIdValue)); // 처음 받은 락 아이디 값을 넘겨주고 응용 영역에서 작업 수행
+someEditService.edit(editReq, new LockId(lockIdValue)); // 데이터와 락 아이디를 사용해서 값을 수정하는 서비스 
 
 model.addAttribute("data",data);  // 데이터를 다시 받을 수 있는듯?? 
 return "editSuccess";  // 화면 출력.
-            }
+}
             
 
-응용 영역
+* 응용 서비스 영역
+
 public void edit(EditRequest editReq, LockId lockId){
 
 lockManager.checkLock(lockId); // 잠금 상태 확인
 
-                               // 기능 실행
+// 기능 실행
 
-lockManager.releaseLock(lockId);// 잠금 해제
+lockManager.releaseLock(lockId);// 데이터 수정이 끝났으므로 잠금 해제
 }
 
 ```
