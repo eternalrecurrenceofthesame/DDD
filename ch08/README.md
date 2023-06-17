@@ -88,7 +88,7 @@ JPA 가 어떤 식으로 대기 시간을 처리하는지 반드시 확인해야
 이때 먼저 수정한 스레드 1 의 작업이 커밋되면 DBMS 에 애그리거트 버전이 변경된다.
 
 스레드 2 는 자신이 조회한 애그리거트 버전과 저장된 애그리거트의 버전이 다르기 때문에 값을 변경할 수 없다.
-
+(즉 새로 조회해서 값을 수정해야 함)
 ```
 
 ```
@@ -109,6 +109,8 @@ public class Order{
 
 UPDATE purchase_order SET ... , version = + 1
 WHERE number = ? and version = 10
+
+JPA 버전 관리는 https://github.com/eternalrecurrenceofthesame/JPA/tree/main/JPA-advance 를 참고한다. 
 ```
 
 응용 서비스는 버전에 대해서 알 필요가 없다.
