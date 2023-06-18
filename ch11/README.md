@@ -44,6 +44,8 @@ CQRS 를 사용하면 다양한 구현기술이 필요하다. 명령과 조회�
 
 위 장단점을 고려해 CQRS 도입을 결정하자.
 
+CQRS 구현에 관해서는 https://github.com/eternalrecurrenceofthesame/DDD/tree/main/ch05 를 참고한다. 
+
 
 
 
